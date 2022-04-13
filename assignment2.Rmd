@@ -1,0 +1,64 @@
+---
+title: "assignment2"
+author: "Jake Eisaguirre"
+date: "4/13/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(tidyverse)
+library(LexisNexisTools)
+library(syuzhet)
+library(sentimentr)
+library(tidytext)
+```
+
+```{r}
+
+my_files <- list.files(pattern = ".docx", path = here(),
+                       full.names = TRUE, recursive = TRUE, ignore.case = TRUE)
+
+dat <- lnt_read(my_files) #Object of class 'LNT output'
+```
+
+```{r}
+meta_df <- dat@meta
+articles_df <- dat@articles
+paragraphs_df <- dat@paragraphs
+
+dat2<- data_frame(element_id = seq(1:length(meta_df$Headline)), Date = meta_df$Date, Headline = meta_df$Headline)
+
+paragraphs_dat <- data_frame(element_id = paragraphs_df$Art_ID, Text  = paragraphs_df$Paragraph)
+
+dat3 <- inner_join(dat2,paragraphs_dat, by = "element_id")
+```
+
+```{r}
+mytext <- get_sentences(dat3$Text)
+
+sent <- sentiment(mytext)
+```
+
+```{r}
+sent_df <- inner_join(dat3, sent, by = "element_id")
+
+sentiment <- sentiment_by(sent_df$Text)
+
+
+sent_df %>%
+  arrange(sentiment)
+```
+
+```{r}
+nrc_sent <- get_sentiments('nrc')
+
+nrc_word_counts <- sent_df %>%
+  inner_join(nrc_sent, by = 'word') 
+
+%>%
+  count(word, sentiment, sort = TRUE) %>%
+  ungroup()
+```
+
