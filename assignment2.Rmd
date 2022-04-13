@@ -1,8 +1,14 @@
 ---
 title: "assignment2"
 author: "Jake Eisaguirre"
-date: "4/13/2022"
-output: html_document
+date: '`r format(Sys.time(), "%m/%d/%Y")`'
+output: 
+  pdf_document:
+    toc: false
+    number_sections: yes
+header-includes:
+  - \setlength{\parindent}{1em}
+  - \usepackage{float}
 ---
 
 ```{r setup, include=FALSE}
@@ -13,6 +19,7 @@ library(LexisNexisTools)
 library(syuzhet)
 library(sentimentr)
 library(tidytext)
+library(lubridate)
 ```
 
 ```{r}
@@ -54,11 +61,35 @@ sent_df %>%
 ```{r}
 nrc_sent <- get_sentiments('nrc')
 
-nrc_word_counts <- sent_df %>%
-  inner_join(nrc_sent, by = 'word') 
+text_words <- dat3  %>%
+  unnest_tokens(output = word, input = Text, token = 'words')
+ 
+sent_words <- text_words%>% #break text into individual words
+  anti_join(stop_words, by = 'word') %>% 
+  inner_join(nrc_sent, by = 'word') %>% 
+  filter(!sentiment %in% c("positive", "negative")) %>% 
+  mutate(Date = as_date(Date))
 
-%>%
-  count(word, sentiment, sort = TRUE) %>%
-  ungroup()
+sent_word_count <- sent_words %>% 
+  group_by(Date, sentiment) %>% 
+  count(sentiment) %>% 
+  ungroup() %>% 
+  group_by(Date) %>% 
+  mutate(n_max = sum(n),
+         percent = round((n / n_max) * 100, 2))
+
+
+```
+
+
+```{r}
+
+ggplot(data = sent_word_count) +
+  geom_line(aes(x = Date, y = percent, fill = sentiment, color = sentiment)) +
+  theme_classic() +
+  labs(title = "Sentiment Surrounding Wildfires for 2022-03-16 to 2022-04-13",
+       y = "Percent",
+       x = "Date")
+
 ```
 
